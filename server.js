@@ -5,6 +5,8 @@ const cors = require('cors');
 // import taskRoutes from './routes/task.routes.js';
 // import { errorHandler } from './middleware/error.middleware.js';
 const connectDB = require('./configs/db')
+const authRoutes = require('./routes/authRoute')
+const taskRoutes = require('./routes/taskRoute')
 
 
 const app = express();
@@ -17,8 +19,8 @@ app.use(express.json());
 connectDB();
 
 // Routes
-// app.use('/api/auth', authRoutes);
-// app.use('/api/tasks', taskRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
