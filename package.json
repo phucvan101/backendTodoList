@@ -20,6 +20,7 @@
     "mongoose": "8.0.3"
   },
   "devDependencies": {
+    "migrate-mongo": "^14.0.7",
     "nodemon": "^3.0.2"
   }
 }
