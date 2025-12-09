@@ -6,6 +6,10 @@ const generateToken = (userId) => {
     return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
 }
 
+const generateRefreshToken = (userId) => {
+    return jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRE });
+}
+
 const register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
