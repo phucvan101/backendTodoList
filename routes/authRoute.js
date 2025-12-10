@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { register, login, refreshToken, logout } = require('../controllers/authController')
 const authenticate = require('../middlewares/authMiddleware');
+const { authLimiter } = require('../middlewares/rateLimiter');
 const { body } = require('express-validator');
 
 
@@ -16,8 +17,8 @@ const validateLogin = [
     body('password').notEmpty().withMessage('Password is required')
 ];
 
-router.post('/register', validateRegister, register);
-router.post('/login', validateLogin, login);
+router.post('/register', authLimiter, validateRegister, register);
+router.post('/login', authLimiter, validateLogin, login);
 router.post('/refresh-token', refreshToken);
 router.post('/logout', authenticate, logout);
 
