@@ -12,13 +12,35 @@ const taskSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'done'],
+        enum: ['pending', 'done', 'in-progress'],
         default: 'pending'
     },
+
+    priority: {
+        type: String,
+        enum: ['low', 'medium', 'high'],
+        default: 'medium'
+    },
+
+    category: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
+        required: true
+    },
+
+    tags: [{
+        type: String,
+        trim: true
+    }],
 
     dueDate: {
         type: Date,
     },
+
+    completedAt: {
+        type: Date,
+    },
+
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

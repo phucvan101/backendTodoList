@@ -8,6 +8,7 @@ const connectDB = require('./configs/db')
 const authRoutes = require('./routes/authRoute')
 const taskRoutes = require('./routes/taskRoute')
 const activityRoutes = require('./routes/activityRoute')
+const categoryRoutes = require('./routes/categoryRoute')
 
 
 const app = express();
@@ -23,7 +24,7 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/activities', activityRoutes);
-
+app.use('/api/categories', categoryRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -5,15 +5,20 @@ const { get } = require('mongoose');
 
 const createTask = async (req, res) => {
     try {
-        const { title, description, dueDate, status } = req.body;
+        const { title, description, dueDate, status, priority, category, tags } = req.body;
         const userId = req.userId;
 
         const newTask = await Task.create({
             title, description,
             dueDate,
-            status,
+            status: status || 'pending',
+            priority: priority || 'medium',
+            category,
+            tags,
             userId
         });
+
+        await newTask.populate('category'); // ra toàn bộ thông tin category (ví dụ name, color, icon…)
 
         res.status(201).json({ message: 'Task created successfully', task: newTask });
     } catch (error) {
