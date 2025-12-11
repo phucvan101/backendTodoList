@@ -98,7 +98,7 @@ const getTaskById = async (req, res) => {
 
 const updatedTask = async (req, res) => {
     try {
-        const { title, description, dueDate, status } = req.body;
+        const { title, description, dueDate, status, priority, category, tags } = req.body;
         const taskId = req.params.id;
         const userId = req.userId;
 
@@ -109,7 +109,7 @@ const updatedTask = async (req, res) => {
 
         const task = await Task.findOneAndUpdate(
             { _id: taskId, userId },
-            { title, description, dueDate, status },
+            { title, description, dueDate, status, priority, category, tags },
             { new: true, runValidators: true } //runValidators để đảm bảo các ràng buộc trong schema được áp dụng khi cập nhật.
         )
 

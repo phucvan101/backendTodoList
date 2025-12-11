@@ -23,7 +23,7 @@ const createCategory = async (req, res) => {
 const getCategories = async (req, res) => {
     try {
         const userId = req.userId;
-        const categories = await Category.find({ userId: userId });
+        const categories = await Category.find({ userId: userId, isDeleted: false });
         res.status(200).json({ categories });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
