@@ -117,6 +117,8 @@ const updatedTask = async (req, res) => {
             res.status(404).json({ message: 'Task not found' });
         }
 
+        await task.populate('category');
+
         res.status(200).json({ message: 'Task updated successfully', task });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -148,5 +150,35 @@ const deleteTask = async (req, res) => {
     }
 }
 
-module.exports = { createTask, getTasks, getTaskById, updatedTask, deleteTask };
+const uploadAttachment = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        const task = await Task.findOne({
+            _id: req.params.id,
+            userId: req.userId,
+            isDeleted: false
+        });
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        task.attachments.push({
+            filename: req.file.originalname,
+            url: `upload/${req.file.filename}`, // Giả sử bạn lưu file trong thư mục 'uploads'
+            uploadedAt: new Date()
+        });
+
+        await task.save();
+
+        res.status(200).json({ message: 'Attachment uploaded successfully', task });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+}
+
+module.exports = { createTask, getTasks, getTaskById, updatedTask, deleteTask, uploadAttachment };
 
