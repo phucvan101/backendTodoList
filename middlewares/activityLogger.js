@@ -9,7 +9,8 @@ Không cần viết log ở từng controller → hệ thống sạch, dễ bả
 */
 
 const { response } = require('express');
-const { ActivityLog } = require('../models/activityLog');
+const ActivityLog = require('../models/activityLog');
+
 
 const logActivity = (action, resource) => {
     return async (req, res, next) => {

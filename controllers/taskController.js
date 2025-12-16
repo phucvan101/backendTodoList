@@ -2,6 +2,7 @@ const { response } = require('express');
 const mongoose = require('mongoose');
 const Task = require('../models/taskModel');
 const { get } = require('mongoose');
+const User = require('../models/userModel')
 
 const createTask = async (req, res) => {
     try {
@@ -180,5 +181,51 @@ const uploadAttachment = async (req, res) => {
     }
 }
 
-module.exports = { createTask, getTasks, getTaskById, updatedTask, deleteTask, uploadAttachment };
+const shareTask = async (req, res) => {
+    try {
+        const { userEmail, permission } = req.body;
+
+        const shareUser = await User.findOne({ email: userEmail });
+
+        if (!shareUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const task = await Task.findOne({
+            _id: req.params.id,
+            userId: req.userId,
+            isDeleted: false,
+        });
+
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' })
+        }
+
+        // check if already shared
+        const alreadyShared = task.sharedWith.find(
+            s => s.user.toString() === shareUser._id.toString()
+        ) //So sánh ObjectId → phải dùng toString()
+
+        if (alreadyShared) {
+            return res.status(400).json({ message: 'Task already share with this user' });
+        }
+
+        task.sharedWith.push({
+            user: shareUser._id,
+            permission: permission || 'view'
+        })
+
+        await task.save();
+        await task.populate('sharedWith.user', 'name email'); //Chỉ lấy 2 field name, email
+
+        res.json({
+            message: 'Task shared successfully',
+            task
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+module.exports = { createTask, getTasks, getTaskById, updatedTask, deleteTask, uploadAttachment, shareTask };
 

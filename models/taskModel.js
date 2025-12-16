@@ -47,6 +47,18 @@ const taskSchema = new mongoose.Schema({
         uploadedAt: Date
     }],
 
+    sharedWith: [{
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        permission: {
+            type: String,
+            enum: ['view', 'edit'],
+            default: 'view',
+        }
+    }],
+
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -68,5 +80,7 @@ const taskSchema = new mongoose.Schema({
 // Index for better query performance
 taskSchema.index({ userId: 1, status: 1 });
 taskSchema.index({ userId: 1, dueDate: 1 });
+taskSchema.index({ dueDate: 1 }); //Lọc task sắp đến hạn
+taskSchema.index({ priority: 1 });
 
 module.exports = mongoose.model('Task', taskSchema);
