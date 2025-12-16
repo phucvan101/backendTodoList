@@ -15,7 +15,7 @@ const activityLogSchema = new mongoose.Schema({
     resource: {
         type: String,
         required: true,
-        enum: ['task', 'user', 'auth']
+        enum: ['task', 'user', 'auth', 'comment']
     },
     resourceId: {
         type: mongoose.Schema.Types.ObjectId,

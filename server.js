@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoute')
 const taskRoutes = require('./routes/taskRoute')
 const activityRoutes = require('./routes/activityRoute')
 const categoryRoutes = require('./routes/categoryRoute')
+const commentRoutes = require('./routes/commentRoute');
 
 
 const app = express();
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/comments', commentRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

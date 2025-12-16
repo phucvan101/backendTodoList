@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Task = require('../models/taskModel');
 const { get } = require('mongoose');
 const User = require('../models/userModel')
+const { canView, canEdit } = require('../utils/taskPermission');
 
 const createTask = async (req, res) => {
     try {
@@ -30,7 +31,13 @@ const createTask = async (req, res) => {
 const getTasks = async (req, res) => {
     try {
         const { status, search, sortBy, page = 1, limit = 10 } = req.query;
-        const query = { userId: req.userId, isDeleted: false };
+        const query = {
+            isDeleted: false,
+            $or: [
+                { userId: req.userId },
+                { 'sharedWith.user': req.userId },
+            ],
+        };
 
         if (status && status !== 'all') {
             query.status = status;
@@ -86,9 +93,13 @@ const getTaskById = async (req, res) => {
         }
 
 
-        const task = await Task.findOne({ _id: taskId, userId, isDeleted: false });
+        const task = await Task.findOne({ _id: taskId, isDeleted: false });
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
+        }
+
+        if (!canView(task, userId)) {
+            return res.status(403).json({ message: 'Permission denied' })
         }
 
         res.status(200).json({ task });
@@ -108,17 +119,20 @@ const updatedTask = async (req, res) => {
             return res.status(400).json({ message: 'Invalid task ID' });
         }
 
-        const task = await Task.findOneAndUpdate(
-            { _id: taskId, userId },
-            { title, description, dueDate, status, priority, category, tags },
-            { new: true, runValidators: true } //runValidators để đảm bảo các ràng buộc trong schema được áp dụng khi cập nhật.
-        )
+        const task = await Task.findOne({ _id: taskId, isDeleted: false })
 
         if (!task) {
             res.status(404).json({ message: 'Task not found' });
         }
 
+        if (!canEdit(task, userId)) {
+            return res.status(403).json({ message: 'Permission denied' })
+        }
+
+        Object.assign(task, { title, description, dueDate, status, priority, category, tags });
+        await task.save();
         await task.populate('category');
+
 
         res.status(200).json({ message: 'Task updated successfully', task });
     } catch (error) {
@@ -136,14 +150,21 @@ const deleteTask = async (req, res) => {
             return res.status(400).json({ message: 'Invalid task ID' });
         }
 
-        const task = await Task.findOneAndUpdate(
-            { _id: taskId, userId },
-            { isDeleted: true, deletedAt: new Date() }
+        const task = await Task.findOne(
+            { _id: taskId },
         )
 
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
         }
+
+        if (!task.userId.equals(userId)) {
+            return res.status(403).json({ message: 'Only owner can delete task' });
+        }
+
+        Object.assign(task, { isDeleted: true, deletedAt: new Date() })
+        await task.save();
+
 
         res.status(200).json({ message: 'Task deleted successfully' });
     } catch (error) {
@@ -167,6 +188,11 @@ const uploadAttachment = async (req, res) => {
             return res.status(404).json({ message: 'Task not found' });
         }
 
+        if (!canEdit(task, req.userId)) {
+            return res.status(403).json({ message: 'Permission denied' });
+        }
+
+
         task.attachments.push({
             filename: req.file.originalname,
             url: `upload/${req.file.filename}`, // Giả sử bạn lưu file trong thư mục 'uploads'
@@ -184,6 +210,11 @@ const uploadAttachment = async (req, res) => {
 const shareTask = async (req, res) => {
     try {
         const { userEmail, permission } = req.body;
+
+        // if (!['view', 'edit'].includes(permission)) {
+        //     return res.status(400).json({ message: 'Invalid permission' });
+        // }
+
 
         const shareUser = await User.findOne({ email: userEmail });
 
