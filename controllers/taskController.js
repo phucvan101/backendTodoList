@@ -4,29 +4,57 @@ const Task = require('../models/taskModel');
 const { get } = require('mongoose');
 const User = require('../models/userModel')
 const { canView, canEdit } = require('../utils/taskPermission');
+const { upload } = require('../middlewares/upload');
+const path = require('path')
 
 const createTask = async (req, res) => {
     try {
         const { title, description, dueDate, status, priority, category, tags } = req.body;
         const userId = req.userId;
 
+        const attachments = [];
+
+        if (req.files?.length) {
+            req.files.forEach(file => {
+                const filename = Buffer
+                    .from(file.originalname, 'latin1')
+                    .toString('utf8');
+
+                attachments.push({
+                    filename,
+                    url: `upload/${file.filename}`,
+                    uploadedAt: new Date()
+                });
+            });
+        }
+
         const newTask = await Task.create({
-            title, description,
+            title,
+            description,
             dueDate,
             status: status || 'pending',
             priority: priority || 'medium',
             category,
             tags,
+            attachments,
             userId
         });
 
-        await newTask.populate('category'); // ra toàn bộ thông tin category (ví dụ name, color, icon…)
+        await newTask.populate('category');
 
-        res.status(201).json({ message: 'Task created successfully', task: newTask });
+        res.status(201).json({
+            message: 'Task created successfully',
+            task: newTask
+        });
+
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message
+        });
     }
-}
+};
+
 
 const getTasks = async (req, res) => {
     try {
@@ -64,7 +92,7 @@ const getTasks = async (req, res) => {
 
         // Promise.all để chạy đồng thời và tiết kiệm thời gian.
         const [tasks, total] = await Promise.all([
-            Task.find(query).sort(sort).skip(skip).limit(limitNum).lean(), // thêm learn để tránh overhead của mongoose documents.
+            Task.find(query).populate('sharedWith.user', 'name email').sort(sort).skip(skip).limit(limitNum).lean(), // thêm learn để tránh overhead của mongoose documents.
             Task.countDocuments(query) //đếm tổng số tài liệu thỏa query để dùng cho pagination.
         ]);
 
@@ -114,31 +142,88 @@ const updatedTask = async (req, res) => {
         const taskId = req.params.id;
         const userId = req.userId;
 
-        // Check ID hợp lệ
         if (!mongoose.Types.ObjectId.isValid(taskId)) {
             return res.status(400).json({ message: 'Invalid task ID' });
         }
 
-        const task = await Task.findOne({ _id: taskId, isDeleted: false })
-
+        const task = await Task.findOne({ _id: taskId, isDeleted: false });
         if (!task) {
-            res.status(404).json({ message: 'Task not found' });
+            return res.status(404).json({ message: 'Task not found' });
         }
 
         if (!canEdit(task, userId)) {
-            return res.status(403).json({ message: 'Permission denied' })
+            return res.status(403).json({ message: 'Permission denied' });
         }
 
-        Object.assign(task, { title, description, dueDate, status, priority, category, tags });
+        /**
+         * 1️⃣ UPDATE FIELD THƯỜNG
+         */
+        Object.assign(task, {
+            title,
+            description,
+            dueDate,
+            status,
+            priority,
+            category,
+            tags
+        });
+
+        /**
+         * 2️⃣ XÓA FILE THEO ID
+         */
+        let removeIds = req.body.removeAttachments || [];
+
+        // normalize về array
+        if (!Array.isArray(removeIds)) {
+            removeIds = [removeIds];
+        }
+
+        if (removeIds.length) {
+            task.attachments = task.attachments.filter(att => {
+                if (removeIds.includes(att._id.toString())) {
+                    const filePath = path.join(__dirname, '..', 'public', att.url);
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                    return false; // remove khỏi DB
+                }
+                return true;
+            });
+        }
+
+        /**
+         * 3️⃣ THÊM FILE MỚI (KHÔNG GHI ĐÈ)
+         */
+        if (req.files?.length) {
+            req.files.forEach(file => {
+                const filename = Buffer
+                    .from(file.originalname, 'latin1')
+                    .toString('utf8');
+
+                task.attachments.push({
+                    filename,
+                    url: `upload/${file.filename}`,
+                    uploadedAt: new Date()
+                });
+            });
+        }
+
         await task.save();
         await task.populate('category');
 
+        res.status(200).json({
+            message: 'Task updated successfully',
+            task
+        });
 
-        res.status(200).json({ message: 'Task updated successfully', task });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message
+        });
     }
-}
+};
+
 
 const deleteTask = async (req, res) => {
     try {
@@ -166,7 +251,7 @@ const deleteTask = async (req, res) => {
         await task.save();
 
 
-        res.status(200).json({ message: 'Task deleted successfully' });
+        res.status(200).json({ message: 'Task deleted successfully', task });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -182,7 +267,7 @@ const uploadAttachment = async (req, res) => {
             _id: req.params.id,
             userId: req.userId,
             isDeleted: false
-        });
+        }).populate({ path: 'sharedWith.user', select: 'name email' });
 
         if (!task) {
             return res.status(404).json({ message: 'Task not found' });
@@ -221,6 +306,8 @@ const shareTask = async (req, res) => {
         if (!shareUser) {
             return res.status(404).json({ message: 'User not found' });
         }
+        console.log('id', req.params.id);
+        console.log('user', req.userId);
 
         const task = await Task.findOne({
             _id: req.params.id,
@@ -247,16 +334,47 @@ const shareTask = async (req, res) => {
         })
 
         await task.save();
-        await task.populate('sharedWith.user', 'name email'); //Chỉ lấy 2 field name, email
+        const populatedTask = await Task.findById(task._id)
+            .populate('sharedWith.user', 'name email');
+
+        console.log(
+            JSON.stringify(populatedTask.sharedWith, null, 2)
+        );
 
         res.json({
             message: 'Task shared successfully',
-            task
+            task: populatedTask
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 }
 
-module.exports = { createTask, getTasks, getTaskById, updatedTask, deleteTask, uploadAttachment, shareTask };
+const downloadAttachment = async (req, res) => {
+    try {
+        const { id, fileId } = req.params;
+
+        const task = await Task.findById(id);
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        if (!canView(task, req.userId)) {
+            return res.status(403).json({ message: 'Permission denied' });
+        }
+
+        const file = task.attachments.id(fileId);
+        if (!file) {
+            return res.status(404).json({ message: 'File not found' });
+        };
+
+        const filePath = path.json(__dirname, '../uploads', file.url);
+
+        res.download(filePath, file.filename);
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
+
+module.exports = { createTask, getTasks, getTaskById, updatedTask, deleteTask, uploadAttachment, shareTask, downloadAttachment };
 

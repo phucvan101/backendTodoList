@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
 
 // Lọc file để chỉ chấp nhận các định dạng hình ảnh
 const fileFilter = (req, file, cd) => {
-    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|txt/;
+    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|txt|xlsx/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLocaleLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
 

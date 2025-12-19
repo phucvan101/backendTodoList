@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createTask, getTasks, getTaskById, updatedTask, deleteTask, uploadAttachment, shareTask } = require('../controllers/taskController');
+const { createTask, getTasks, getTaskById, updatedTask, deleteTask, uploadAttachment, shareTask, downloadAttachment } = require('../controllers/taskController');
 const { body } = require('express-validator');
 const authenticate = require('../middlewares/authMiddleware');
 const { upload } = require('../middlewares/upload');
@@ -11,13 +11,14 @@ const validateTask = [
 ]
 router.use(authenticate);
 
-router.post('/create', validateTask, createTask);
+router.post('/create', upload.array('attachments', 10), validateTask, createTask); // multer LUÔN LUÔN đứng trước
 router.get('/', getTasks);
 router.get('/:id', getTaskById);
-router.post('/update/:id', validateTask, updatedTask);
+router.post('/update/:id', upload.array('attachments', 10), validateTask, updatedTask);
 router.post('/delete/:id', deleteTask);
-router.post('/upload-attachment/:id', upload.single('file'), uploadAttachment);
+// router.post('/upload-attachment/:id', upload.single('file'), uploadAttachment);
 router.post('/:id/share', logActivity('share', 'task'), shareTask)
+router.post('/:id/attachments/:fileId/download', downloadAttachment)
 
 
 module.exports = router;
