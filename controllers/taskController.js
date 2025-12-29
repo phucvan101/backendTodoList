@@ -6,6 +6,8 @@ const User = require('../models/userModel')
 const { canView, canEdit } = require('../utils/taskPermission');
 const { upload } = require('../middlewares/upload');
 const path = require('path')
+const fs = require('fs');
+
 
 const createTask = async (req, res) => {
     try {
