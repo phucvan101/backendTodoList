@@ -10,6 +10,7 @@ const taskRoutes = require('./routes/taskRoute')
 const activityRoutes = require('./routes/activityRoute')
 const categoryRoutes = require('./routes/categoryRoute')
 const commentRoutes = require('./routes/commentRoute');
+const aiRoutes = require('./routes/aiRoute');
 
 
 const app = express();
@@ -27,7 +28,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/comments', commentRoutes);
-
+app.use('/api/ai', aiRoutes);
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', message: 'Server is running' });

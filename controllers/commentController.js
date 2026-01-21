@@ -45,6 +45,7 @@ const getComments = async (req, res) => {
 
         const comments = await Comment.find({ taskId }).populate('userId', 'name avatar').sort({ createAt: -1 })
 
+        console.log('list: ', comments);
         res.json({ comments });
     } catch (error) {
         return res.status(500).json({ message: error.message })

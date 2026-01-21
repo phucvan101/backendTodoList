@@ -18,7 +18,7 @@ const taskSchema = new mongoose.Schema({
 
     priority: {
         type: String,
-        enum: ['low', 'medium', 'high'],
+        enum: ['low', 'medium', 'high', 'urgent'],
         default: 'medium'
     },
 
@@ -64,6 +64,20 @@ const taskSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+
+    aiGenerated: {
+        type: Boolean,
+        default: false
+    },
+    originalPrompt: {
+        type: String
+    },
+    aiMetadata: {
+        generatedAt: Date,
+        model: String,
+        confidence: Number
+    },
+
     isDeleted: {
         type: Boolean,
         default: false

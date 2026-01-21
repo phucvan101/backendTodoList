@@ -11,7 +11,8 @@ const fs = require('fs');
 
 const createTask = async (req, res) => {
     try {
-        const { title, description, dueDate, status, priority, category, tags } = req.body;
+        const { title, description, dueDate, status, priority, tags } = req.body;
+        let category = req.body.category;
         const userId = req.userId;
 
         const attachments = [];
@@ -28,6 +29,11 @@ const createTask = async (req, res) => {
                     uploadedAt: new Date()
                 });
             });
+        }
+
+        // Normalize category
+        if (!category || category === "" || category === "undefined" || category === "null") {
+            category = null;
         }
 
         const newTask = await Task.create({
@@ -60,7 +66,7 @@ const createTask = async (req, res) => {
 
 const getTasks = async (req, res) => {
     try {
-        const { status, search, sortBy, page = 1, limit = 10 } = req.query;
+        const { status, search, sortBy, page = 1, limit = 10, category, priority } = req.query;
         const query = {
             isDeleted: false,
             $or: [
@@ -71,6 +77,14 @@ const getTasks = async (req, res) => {
 
         if (status && status !== 'all') {
             query.status = status;
+        }
+
+        if (category) {
+            query.category = category;
+        }
+
+        if (priority && priority !== 'all') {
+            query.priority = priority;
         }
 
         if (search) {
